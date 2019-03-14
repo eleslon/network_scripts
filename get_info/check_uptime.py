@@ -6,92 +6,39 @@ import netmiko
 import re
 from tabulate import tabulate
 import getpass
+from devices import switches, office_switches
 
 username = input('Enter username:')
 password = getpass.getpass('Enter password:')
 
 columns = ['Hostname', 'Uptime']
-office_switches = {
-    's1-Spb-Linx-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.6',
-        'username': username,
-        'password': password
-    },
-    's2-Spb-Linx-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.12',
-        'username': username,
-        'password': password
-    },
-
-    's3-Spb-Linx-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.3',
-        'username': username,
-        'password': password
-    },
-
-    's4-Spb-Linx-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.4',
-        'username': username,
-        'password': password
-    }}
-
-switches = {
-    'cs1-Spb-Rep-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.2',
-        'username': username,
-        'password': password
-    },
-    'cs2-Spb-Rep-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.5',
-        'username': username,
-        'password': password
-    },
-    'cs3-Spb-Rep-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.103',
-        'username': username,
-        'password': password
-    },
-    's1-Spb-Rep-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.101',
-        'username': username,
-        'password': password
-    },
-    's2-Spb-Rep-RU': {
-        'device_type': 'cisco_ios',
-        'ip': '10.80.109.102',
-        'username': username,
-        'password': password
-    }}
 
 
-def print_all_data(devices):
-    result = []
+def get_uptime(*args):
+    '''
+    Функция ожидает аргументы:
+    * args - словарь словарей
 
-
-def get_uptime(*devices):
+    Функция подключается к каждому устройству по SSH из переданного словаря, выполняет "sh ver", парсит uptime
+    и выводит информацию на стандартный поток вывода.
+    Функция tabulate используется для вывода информации ввиде таблицы.
+    Для подключения используется модуль netmiko
+    '''
     result = []
     regex = r'uptime is(.*?)\nSystem'
-    for switch in devices:
-        for sw in switch:
+    for devices in args:
+        for switch in devices:
             temp = []
             try:
-                net_connect = ConnectHandler(**switch[sw])
+                net_connect = ConnectHandler(**devices[switch])
                 output = net_connect.send_command('show ver')
                 match = re.search(regex, output, re.DOTALL)
-                temp.append(sw)
+                temp.append(switch)
                 temp.append(match.groups()[0])
                 result.append(tuple(temp))
-                print('Getting info from {}'.format(sw) + '   ' + 'OK')
+                print('Getting info from {}'.format(switch) + '   ' + 'OK')
             except (netmiko.ssh_exception.NetMikoAuthenticationException) as error:
-                print('Getting info from {}'.format(sw) + '   ' + 'NOT OK')
+                print('Getting info from {}'.format(switch) + '   ' + 'NOT OK')
     if result:
         print('Switches:' + '\n')
         print(tabulate(result, headers=columns))
